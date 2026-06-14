@@ -1,0 +1,17 @@
+# Roblox place / model binaries — source of truth is src/, not these.
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Wally-managed packages (restored via `wally install`; wally.lock IS committed).
+/Packages
+/ServerPackages
+/DevPackages
+
+# Generated artifacts
+sourcemap.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
