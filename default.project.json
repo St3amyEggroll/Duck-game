@@ -4,22 +4,24 @@
 		"$className": "DataModel",
 
 		"ReplicatedStorage": {
-			"Shared": {
-				"$path": "src/shared"
+			"DuckShared": {
+				"$path": "src/shared/DuckShared"
+			},
+			"Maps": {
+				"$path": "src/shared/Maps"
+			},
+			"WeaponData": {
+				"$path": "src/shared/WeaponData"
 			}
 		},
 
 		"ServerScriptService": {
-			"Server": {
-				"$path": "src/server"
-			}
+			"$path": "src/server"
 		},
 
 		"StarterPlayer": {
 			"StarterPlayerScripts": {
-				"Client": {
-					"$path": "src/client"
-				}
+				"$path": "src/client"
 			}
 		}
 	}
