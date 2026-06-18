@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
+local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
 
@@ -48,10 +49,24 @@ gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
 local ammoLabel = PixelUI.label({
 	parent = gui, text = "", textSize = 22, color = PixelUI.PALETTE.accent,
-	size = UDim2.fromOffset(220, 30), position = UDim2.new(0.5, 0, 1, -46),
+	size = UDim2.fromOffset(220, 30), position = UDim2.new(0.5, 0, 1, -66),
 })
-ammoLabel.AnchorPoint = Vector2.new(0.5, 0)
+ammoLabel.AnchorPoint = Vector2.new(0.5, 1) -- sits just above the health bar
 ammoLabel.Visible = false
+
+-- crosshair that follows the cursor while you're alive
+local crosshair = PixelUI.crosshair({ parent = gui, color = PixelUI.PALETTE.accent })
+crosshair.Visible = false
+
+RunService.RenderStepped:Connect(function()
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local alive = hum ~= nil and hum.Health > 0
+	crosshair.Visible = alive
+	if not alive then return end
+	local m = UserInputService:GetMouseLocation()
+	local inset = GuiService:GetGuiInset()
+	crosshair.Position = UDim2.fromOffset(m.X + inset.X, m.Y + inset.Y)
+end)
 
 local function clearGun()
 	gunMotor, handle, muzzle, gunModel = nil, nil, nil, nil
@@ -112,7 +127,9 @@ RunService.RenderStepped:Connect(function()
 		aimRemote:FireServer(angle)
 	end
 	if gunModel then
-		ammoLabel.Text = "AMMO " .. tostring(gunModel:GetAttribute("Ammo") or 0)
+		local ammo = tonumber(gunModel:GetAttribute("Ammo")) or 0
+		ammoLabel.Text = "AMMO " .. tostring(ammo)
+		ammoLabel.TextColor3 = (ammo <= 2) and PixelUI.PALETTE.lowAmmo or PixelUI.PALETTE.accent
 	end
 end)
 
@@ -203,10 +220,10 @@ effectRemote.OnClientEvent:Connect(function(kind, data)
 			local length = (endp - origin).Magnitude
 			if length > 0.05 then
 				quickPart({
-					Size = Vector3.new(0.15, 0.15, length),
+					Size = Vector3.new(0.22, 0.22, length),
 					Color = data.c or Color3.fromRGB(255, 230, 120),
 					CFrame = CFrame.lookAt(origin, endp) * CFrame.new(0, 0, -length / 2),
-				}, 0.06)
+				}, 0.07)
 			end
 		end
 		flash(origin)

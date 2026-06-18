@@ -1,6 +1,6 @@
 -- RoundHud (LocalScript) | StarterPlayer > StarterPlayerScripts
 -- Polished pixel HUD driven by the RoundState remote. Shows a countdown/fight/
--- winner banner + a scoreboard.
+-- winner banner, a scoreboard, and the local duck's health bar.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -110,6 +110,67 @@ local function updateBoard(scores)
 		row.LayoutOrder = i
 	end
 end
+
+--------------------------------------------------------------------
+-- health bar (bottom center) -- bound to the local duck's Humanoid
+--------------------------------------------------------------------
+local healthPanel = PixelUI.panel({
+	parent = gui,
+	size = UDim2.fromOffset(280, 40),
+	position = UDim2.new(0.5, 0, 1, -18),
+	anchor = Vector2.new(0.5, 1),
+})
+healthPanel.Visible = false
+
+local healthPad = Instance.new("UIPadding")
+healthPad.PaddingTop = UDim.new(0, 8)
+healthPad.PaddingBottom = UDim.new(0, 8)
+healthPad.PaddingLeft = UDim.new(0, 10)
+healthPad.PaddingRight = UDim.new(0, 10)
+healthPad.Parent = healthPanel
+
+local healthBar = PixelUI.bar({
+	parent = healthPanel,
+	size = UDim2.fromScale(1, 1),
+})
+local healthFill = healthBar.Fill
+
+local healthText = PixelUI.label({
+	parent = healthBar,
+	text = "",
+	textSize = 16,
+	size = UDim2.fromScale(1, 1),
+})
+healthText.ZIndex = 3
+
+local function setHealth(current: number, max: number)
+	local ratio = math.clamp(max > 0 and current / max or 0, 0, 1)
+	TweenService:Create(healthFill, TweenInfo.new(0.18, Enum.EasingStyle.Quad),
+		{ Size = UDim2.new(ratio, 0, 1, 0) }):Play()
+	healthFill.BackgroundColor3 = (ratio <= 0.3) and PALETTE.lowAmmo or PALETTE.health
+	healthText.Text = string.format("%d / %d", math.max(0, math.floor(current + 0.5)), math.floor(max + 0.5))
+end
+
+local function bindCharacter(char: Model)
+	local hum = char:WaitForChild("Humanoid", 5) :: Humanoid?
+	if not hum then return end
+	healthPanel.Visible = true
+	setHealth(hum.Health, hum.MaxHealth)
+	hum.HealthChanged:Connect(function(h)
+		setHealth(h, hum.MaxHealth)
+	end)
+	hum.Died:Connect(function()
+		setHealth(0, hum.MaxHealth)
+	end)
+end
+
+player.CharacterAdded:Connect(bindCharacter)
+if player.Character then
+	task.spawn(bindCharacter, player.Character)
+end
+player.CharacterRemoving:Connect(function()
+	healthPanel.Visible = false
+end)
 
 --------------------------------------------------------------------
 -- react to round state

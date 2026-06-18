@@ -8,11 +8,15 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local MapService = require(ServerScriptService:WaitForChild("MapService"))
 local WeaponDefs = require(ReplicatedStorage:WaitForChild("DuckShared"):WaitForChild("WeaponDefs"))
 
 local RESPAWN_TIME = 8
+local BOB_AMP = 0.45   -- studs the pickup floats up/down
+local BOB_SPEED = 2.6  -- bob cycles per second-ish
+local SPIN_SPEED = 1.4 -- radians/sec, in-plane (faces the camera)
 
 -- equip channel (don't hang forever -- warn if WeaponService didn't make it)
 local equipRequest
@@ -67,6 +71,19 @@ local function makePickup(parent, pos, point)
 	lbl.Text = string.upper(entry.name)
 	lbl.Parent = bb
 
+	-- colored glow so pickups pop against the flat world
+	local glow = Instance.new("PointLight")
+	glow.Color = entry.color
+	glow.Brightness = 2
+	glow.Range = 9
+	glow.Parent = pick
+
+	-- spawn pop: scale up from small
+	local fullSize = pick.Size
+	pick.Size = fullSize * 0.4
+	TweenService:Create(pick, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Size = fullSize }):Play()
+
 	pick.Touched:Connect(function(hit)
 		if pick:GetAttribute("Available") ~= true then return end
 		local model = hit:FindFirstAncestorOfClass("Model")
@@ -91,7 +108,12 @@ local function rebuildForMap()
 	local data = MapService.currentData
 	local pts = data and (data.weaponSpawns or data.spawns) or {}
 	for _, s in ipairs(pts) do
-		table.insert(points, { pos = Vector3.new(s.x, s.y, 0), part = nil, nextSpawn = 0 })
+		table.insert(points, {
+			pos = Vector3.new(s.x, s.y, 0),
+			part = nil,
+			nextSpawn = 0,
+			phase = math.random() * math.pi * 2, -- desync the bob between pickups
+		})
 	end
 end
 
@@ -111,6 +133,14 @@ RunService.Heartbeat:Connect(function()
 	for _, point in ipairs(points) do
 		if (not point.part or not point.part.Parent) and now >= point.nextSpawn then
 			makePickup(map, point.pos, point)
+		end
+		-- float + spin live pickups (in-plane, so they stay facing the camera)
+		local part = point.part
+		if part and part.Parent then
+			local base = point.pos
+			local bob = math.sin(now * BOB_SPEED + point.phase) * BOB_AMP
+			part.CFrame = CFrame.new(base.X, base.Y + bob, base.Z)
+				* CFrame.Angles(0, 0, now * SPIN_SPEED)
 		end
 	end
 end)

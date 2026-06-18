@@ -55,25 +55,64 @@ local _, DEFS = WeaponDefs.loadAll()
 
 local state = {} -- [Player] = { def, ammo, lastFire, gun, motor, muzzle, torso, rootJoint, restC0 }
 
+-- A nicer procedural placeholder: tinted body + grip, dark metal barrel/sight,
+-- and a glowing muzzle tip. Used when there's no custom model in
+-- ReplicatedStorage/Weapons. Tint/glow come from the weapon's data table, so
+-- every weapon reads as distinct without anyone modelling a thing.
 local function buildModel(def): Model
 	local weapons = ReplicatedStorage:FindFirstChild("Weapons")
 	local template = weapons and weapons:FindFirstChild(def.name)
 	if template and template:IsA("Model") and template.PrimaryPart then
 		return template:Clone()
 	end
-	local gun = Instance.new("Model"); gun.Name = def.name
+
+	local tint = def.color or Color3.fromRGB(70, 72, 86)
+	local gripColor = Color3.new(tint.R * 0.78, tint.G * 0.78, tint.B * 0.78)
+	local metal = Color3.fromRGB(34, 34, 42)
+	local glow = def.tracerColor or def.swingColor or def.explosionColor or Color3.fromRGB(255, 220, 120)
+
+	local gun = Instance.new("Model")
+	gun.Name = def.name
+
 	local handle = Instance.new("Part")
-	handle.Name = "Handle"; handle.Size = Vector3.new(0.5, 0.7, 2.4)
-	handle.Color = def.color or Color3.fromRGB(45, 45, 55)
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.5, 0.7, 2.2)
+	handle.Color = tint
 	handle.Material = Enum.Material.SmoothPlastic
-	handle.CanCollide = false; handle.Massless = true; handle.Parent = gun
-	local barrel = Instance.new("Part")
-	barrel.Name = "Barrel"; barrel.Size = Vector3.new(0.3, 0.3, 1.4)
-	barrel.Color = Color3.fromRGB(28, 28, 36); barrel.Material = Enum.Material.SmoothPlastic
-	barrel.CanCollide = false; barrel.Massless = true; barrel.Parent = gun
-	local w = Instance.new("Weld"); w.Part0 = handle; w.Part1 = barrel; w.C0 = CFrame.new(0, 0.15, -1.4); w.Parent = handle
-	local muz = Instance.new("Attachment"); muz.Name = "Muzzle"; muz.Position = Vector3.new(0, 0.15, -2.1); muz.Parent = handle
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.CastShadow = false
+	handle.Parent = gun
 	gun.PrimaryPart = handle
+
+	local function piece(name, size, c0, color, material)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Color = color
+		p.Material = material or Enum.Material.SmoothPlastic
+		p.CanCollide = false
+		p.Massless = true
+		p.CastShadow = false
+		p.Parent = gun
+		local weld = Instance.new("Weld")
+		weld.Part0 = handle
+		weld.Part1 = p
+		weld.C0 = c0
+		weld.Parent = handle
+		return p
+	end
+
+	piece("Grip", Vector3.new(0.42, 0.95, 0.62), CFrame.new(0, -0.62, 0.78), gripColor)
+	piece("Barrel", Vector3.new(0.34, 0.34, 1.5), CFrame.new(0, 0.16, -1.45), metal)
+	piece("Sight", Vector3.new(0.16, 0.24, 0.5), CFrame.new(0, 0.5, -0.55), metal)
+	piece("MuzzleTip", Vector3.new(0.3, 0.3, 0.18), CFrame.new(0, 0.16, -2.18), glow, Enum.Material.Neon)
+
+	local muz = Instance.new("Attachment")
+	muz.Name = "Muzzle"
+	muz.Position = Vector3.new(0, 0.16, -2.25)
+	muz.Parent = handle
+
 	return gun
 end
 
